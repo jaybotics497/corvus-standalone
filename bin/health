@@ -1,0 +1,26 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+source "$HOME/corvus/config/corvus.env"
+source "$HOME/corvus/config/runtime.env"
+
+echo "=== CORVUS HEALTH ==="
+echo "Version: $CORVUS_VERSION"
+echo "Mode:    $CORVUS_MODE"
+echo "Context: $CORVUS_CONTEXT"
+echo "Threads: $CORVUS_THREADS"
+
+echo
+echo "--- Runtime ---"
+[ -x "$LLAMA_CLI" ] && echo "llama-cli:    OK" || echo "llama-cli:    FAIL"
+[ -x "$LLAMA_SERVER" ] && echo "llama-server: OK" || echo "llama-server: FAIL"
+
+echo
+echo "--- Memory ---"
+free -h
+
+echo
+echo "--- Storage ---"
+df -h "$HOME" | tail -1
+
+echo
+echo "=== HEALTH CHECK COMPLETE ==="

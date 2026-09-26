@@ -1,0 +1,34 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+BASE="$HOME/corvus"
+INDEX="$BASE/data/index/library.tsv"
+
+echo "=== CORVUS LIBRARY CHECK ==="
+
+PASS=0
+FAIL=0
+
+while IFS=$'\t' read -r id subject title path trust status; do
+    [ "$id" = "ID" ] && continue
+
+    file="$BASE/$path"
+
+    if [ -f "$file" ]; then
+        echo "[PASS] $id | $title | $trust"
+        PASS=$((PASS+1))
+    else
+        echo "[FAIL] $id | MISSING FILE: $path"
+        FAIL=$((FAIL+1))
+    fi
+done < "$INDEX"
+
+echo
+echo "Sources: $((PASS+FAIL))"
+echo "Passed:  $PASS"
+echo "Failed:  $FAIL"
+
+if [ "$FAIL" -eq 0 ]; then
+    echo "LIBRARY HEALTH: PASS"
+else
+    echo "LIBRARY HEALTH: FAIL"
+fi

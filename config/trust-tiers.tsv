@@ -1,0 +1,7 @@
+TIER	NAME	WEIGHT	DESCRIPTION
+A	PRIMARY_ACADEMIC	1.00	Peer-reviewed research, official academic publications, primary scholarly sources
+B	ACADEMIC_TEXTBOOK	0.90	Established textbooks and reputable educational sources
+C	REFERENCE	0.75	Reputable reference works, institutions and expert secondary sources
+D	USER_VERIFIED	0.70	User notes or CORVUS material checked against reliable sources
+E	UNVERIFIED	0.40	Imported material not yet verified
+F	SYNTHETIC	0.10	Test or generated material; never treated as authoritative

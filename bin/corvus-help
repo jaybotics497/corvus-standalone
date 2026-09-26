@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+echo "=== CORVUS COMMANDS ==="
+echo "corvus status          System health"
+echo "corvus library         Library statistics"
+echo "corvus search TERMS    Search local library"
+echo "corvus ask QUESTION    Answer from library sources"
+echo "corvus pipeline FILE   Process accepted file"

@@ -1,0 +1,7 @@
+TITLE: Active Recall Alternative
+SUBJECT: Psychology
+SOURCE_TYPE: Test Sample
+TRUST_TIER: LOW
+STATUS: Synthetic Conflict
+
+Active recall means repeatedly rereading information until it is memorised.

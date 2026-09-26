@@ -1,0 +1,37 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+BASE="$HOME/corvus"
+source "$BASE/config/corvus.env"
+source "$BASE/config/runtime.env"
+
+MODEL="$BASE/data/models/qwen2.5-1.5b-instruct-q4_k_m.gguf"
+RAM=$(awk '/MemAvailable:/ {printf "%d", $2/1024}' /proc/meminfo)
+
+if [ "$RAM" -lt "$CORVUS_CRITICAL_RAM_MB" ]; then
+    echo "CORVUS: inference blocked - critical memory pressure."
+    exit 2
+fi
+
+if [ ! -f "$MODEL" ]; then
+    echo "CORVUS: model missing."
+    exit 3
+fi
+
+PROMPT="$*"
+
+if [ -z "$PROMPT" ]; then
+    echo "Usage: corvus-ask \"question\""
+    exit 1
+fi
+
+exec "$LLAMA_CLI" \
+    -m "$MODEL" \
+    -c "$CORVUS_CONTEXT" \
+    -t "$CORVUS_THREADS" \
+    -n 96 \
+    --simple-io \
+    --log-disable \
+    --single-turn \
+    --no-display-prompt \
+    -p "$PROMPT" \
+    </dev/null

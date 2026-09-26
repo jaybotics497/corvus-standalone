@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+set -e
+
+FILE="$1"
+if [ -z "$FILE" ]; then
+ echo "USAGE: corvus-pipeline FILE"
+ exit 1
+fi
+
+echo "=== CORVUS PIPELINE ==="
+~/corvus/bin/extract-file.py "$FILE"
+
+SUBJECT=$(basename "$(dirname "$FILE")")
+NAME=$(basename "$FILE")
+STEM="${NAME%.*}"
+EXTRACTED=~/corvus/data/extracted/"$SUBJECT"/"$STEM".txt
+
+if [ "${NAME##*.}" = "pdf" ]; then
+  ~/corvus/bin/extract-pages.py "$FILE"
+  ~/corvus/bin/chunk-pages.py ~/corvus/data/pages/"$SUBJECT"/"$STEM"
+else
+  ~/corvus/bin/chunk-file.py "$EXTRACTED"
+fi
+
+~/corvus/bin/index-chunks.py ~/corvus/data/chunks/"$SUBJECT"/"$STEM"
+TYPE="${NAME##*.}"
+~/corvus/bin/add-source.py "$SUBJECT" "$NAME" "$STEM" "" "$TYPE"
+
+echo "=== PIPELINE PASS ==="

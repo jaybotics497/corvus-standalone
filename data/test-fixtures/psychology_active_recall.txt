@@ -1,0 +1,17 @@
+TITLE: Active Recall
+SUBJECT: Psychology
+SOURCE_TYPE: Test Sample
+TRUST_TIER: TEST
+STATUS: Synthetic
+
+Active recall is a learning technique in which a learner deliberately retrieves information from memory without first looking at the answer.
+
+For example, after studying the definition of classical conditioning, the learner closes the book and attempts to explain the concept from memory.
+
+Retrieval practice strengthens later access to learned information. Testing should therefore be used not only to measure learning but also as part of the learning process.
+
+CORVUS STUDY TARGETS:
+1. Define active recall.
+2. Explain retrieval practice.
+3. Give an example of active recall.
+4. Distinguish active recall from passive rereading.
