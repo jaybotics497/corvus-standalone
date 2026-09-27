@@ -11,6 +11,9 @@ avail_mb() {
 }
 
 case "$1" in
+  version)
+    echo "$CORVUS_VERSION"
+    ;;
   help)
     shift
     ~/corvus/bin/corvus-help
