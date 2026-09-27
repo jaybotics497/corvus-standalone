@@ -228,3 +228,57 @@ nav .active {
   object-fit: contain;
   display: block;
 }
+
+/* Chat v1 visual system */
+.welcome {
+  padding:18px 0 10px;
+}
+
+.welcome .raven-mark {
+  margin:0 auto 10px;
+  width:34px;
+  height:27px;
+  filter:drop-shadow(0 0 10px rgba(184,154,97,.16));
+}
+
+.welcome h2 {
+  margin:0 0 5px;
+  font-size:14px;
+  letter-spacing:5px;
+}
+
+.welcome p {
+  font-size:9px;
+  letter-spacing:2px;
+}
+
+.messages {
+  display:flex;
+  flex-direction:column;
+  justify-content:flex-end;
+  padding:18px 0;
+}
+
+.message.corvus {
+  position:relative;
+  padding:15px 16px;
+  background:linear-gradient(145deg,#151a1e,#101416);
+  border-color:#292d2e;
+}
+
+.message.corvus small {
+  display:block;
+  margin-bottom:7px;
+  color:var(--gold);
+  font-size:8px;
+  font-weight:700;
+  letter-spacing:2px;
+}
+
+.composer {
+  box-shadow:0 12px 35px rgba(0,0,0,.28);
+}
+
+.composer:focus-within {
+  border-color:#5b4d34;
+}
