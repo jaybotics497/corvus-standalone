@@ -19,6 +19,10 @@ case "$1" in
   version)
     echo "$CORVUS_VERSION"
     ;;
+  runtime)
+    echo "Context: $CORVUS_CONTEXT"
+    echo "Threads: $CORVUS_THREADS"
+    ;;
   help)
     shift
     ~/corvus/bin/corvus-help
