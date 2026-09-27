@@ -39,7 +39,7 @@ case "$1" in
     shift
     ~/corvus/bin/corvus-pipeline "$@"
     ;;
-    status)
+    status|diagnostics)
         RAM=$(avail_mb)
         echo "=== CORVUS V1 ==="
         echo "RAM available: ${RAM} MB"
