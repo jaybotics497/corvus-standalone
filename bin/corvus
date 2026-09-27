@@ -23,6 +23,13 @@ case "$1" in
     echo "Context: $CORVUS_CONTEXT"
     echo "Threads: $CORVUS_THREADS"
     ;;
+  resource)
+    echo "=== CORVUS RESOURCES ==="
+    awk '/MemAvailable:/ {printf "RAM available: %d MB\n", $2/1024}' /proc/meminfo
+    awk '/SwapTotal:/ {t=$2} /SwapFree:/ {printf "Swap available: %d / %d MB\n", $2/1024, t/1024}' /proc/meminfo
+    df -k "$HOME/storage/shared" | awk 'NR==2 {printf "Internal storage: %d MB free / %d MB total\n", $4/1024, $2/1024}'
+    du -sm "$BASE" | awk '{printf "CORVUS storage usage: %d MB\n", $1}'
+    ;;
   help)
     shift
     ~/corvus/bin/corvus-help
