@@ -11,6 +11,11 @@ avail_mb() {
 }
 
 case "$1" in
+  dev-status)
+    echo "=== CORVUS DEVELOPMENT ==="
+    [ -d "$HOME/corvus-dev" ] && echo "Workspace: READY" || echo "Workspace: MISSING"
+    [ -x "$HOME/corvus-dev/dev-manager.py" ] && echo "Manager: READY" || echo "Manager: MISSING"
+    ;;
   version)
     echo "$CORVUS_VERSION"
     ;;
