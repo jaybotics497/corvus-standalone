@@ -24,14 +24,27 @@ if [ -z "$PROMPT" ]; then
     exit 1
 fi
 
-exec "$LLAMA_CLI" \
+OUT=$(mktemp)
+trap 'rm -f "$OUT"' EXIT
+
+"$LLAMA_CLI" \
     -m "$MODEL" \
     -c "$CORVUS_CONTEXT" \
     -t "$CORVUS_THREADS" \
-    -n 96 \
+    -n "${CORVUS_MAX_TOKENS:-384}" \
     --simple-io \
     --log-disable \
     --single-turn \
     --no-display-prompt \
+    --output-file "$OUT" \
     -p "$PROMPT" \
-    </dev/null
+    >/dev/null 2>&1 </dev/null
+
+STATUS=$?
+
+if [ "$STATUS" -ne 0 ]; then
+    echo "CORVUS: inference failed."
+    exit "$STATUS"
+fi
+
+sed -n '/^Assistant:$/,$p' "$OUT" | sed '1d'

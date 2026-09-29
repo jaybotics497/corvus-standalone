@@ -1,44 +1,164 @@
 #!/usr/bin/env python3
-from http.server import HTTPServer,BaseHTTPRequestHandler
+from http.server import HTTPServer, BaseHTTPRequestHandler
 from pathlib import Path
-import json,subprocess
+import json
+import os
+import subprocess
 
-HOST="127.0.0.1"
-PORT=8765
-BASE=Path.home()/"corvus"
-TOKEN=(BASE/"api/token").read_text().strip()
+HOST = "127.0.0.1"
+PORT = 8765
 
-COMMANDS={
- "status":[str(BASE/"bin/corvus"),"status"],
- "library":[str(BASE/"bin/corvus"),"library"],
+BASE = Path(os.environ.get("CORVUS_BASE", str(Path.home() / "corvus")))
+TOKEN = (BASE / "api/token").read_text().strip()
+
+MAX_PROMPT_LENGTH = 8000
+ASK_TIMEOUT = float(os.environ.get("CORVUS_ASK_TIMEOUT", "600"))
+
+COMMANDS = {
+    "status": [str(BASE / "bin/corvus"), "status"],
+    "library": [str(BASE / "bin/corvus"), "library"],
 }
+
+
 class Handler(BaseHTTPRequestHandler):
- def reply(self,code,data):
-  body=json.dumps(data).encode()
-  self.send_response(code)
-  self.send_header("Content-Type","application/json")
-  self.send_header("Content-Length",str(len(body)))
-  self.end_headers()
-  self.wfile.write(body)
+    protocol_version = "HTTP/1.1"
 
- def do_GET(self):
-  if self.headers.get("Authorization") != "Bearer "+TOKEN:
-   self.reply(401,{"error":"unauthorized"})
-   return
-  name=self.path.strip("/")
-  if name not in COMMANDS:
-   self.reply(404,{"error":"unknown command"})
-   return
+    def reply(self, code, data):
+        body = json.dumps(data).encode()
+        self.send_response(code)
+        self.send_header("Content-Type", "application/json")
+        self.send_header("Content-Length", str(len(body)))
+        self.send_header("Connection", "close")
+        self.end_headers()
+        self.wfile.write(body)
+        self.wfile.flush()
+        self.close_connection = True
 
-  try:
-   r=subprocess.run(COMMANDS[name],capture_output=True,text=True,timeout=30)
-   self.reply(200,{"command":name,"code":r.returncode,"output":r.stdout})
-  except Exception as e:
-   self.reply(500,{"error":str(e)})
+    def authorized(self):
+        return self.headers.get("Authorization") == "Bearer " + TOKEN
 
- def log_message(self,format,*args):
-  pass
+    def do_GET(self):
+        if self.path == "/health":
+            self.reply(200, {
+                "service": "CORVUS",
+                "status": "ready"
+            })
+            return
 
-if __name__=="__main__":
- print(f"CORVUS API: http://{HOST}:{PORT}")
- HTTPServer((HOST,PORT),Handler).serve_forever()
+        if not self.authorized():
+            self.reply(401, {"error": "unauthorized"})
+            return
+
+        name = self.path.strip("/")
+
+        if name not in COMMANDS:
+            self.reply(404, {"error": "unknown command"})
+            return
+
+        try:
+            r = subprocess.run(
+                COMMANDS[name],
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            self.reply(
+                200,
+                {
+                    "command": name,
+                    "code": r.returncode,
+                    "output": r.stdout,
+                },
+            )
+        except Exception as e:
+            self.reply(500, {"error": str(e)})
+
+    def do_POST(self):
+        if not self.authorized():
+            self.reply(401, {"error": "unauthorized"})
+            return
+
+        if self.path not in ("/ask", "/develop"):
+            self.reply(404, {"error": "unknown command"})
+            return
+
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            self.reply(400, {"error": "invalid content length"})
+            return
+
+        if length <= 0:
+            self.reply(400, {"error": "malformed JSON"})
+            return
+
+        try:
+            raw = self.rfile.read(length)
+            data = json.loads(raw)
+        except (UnicodeDecodeError, json.JSONDecodeError):
+            self.reply(400, {"error": "malformed JSON"})
+            return
+
+        if not isinstance(data, dict):
+            self.reply(400, {"error": "JSON body must be an object"})
+            return
+
+        prompt = data.get("prompt")
+
+        if not isinstance(prompt, str) or not prompt.strip():
+            self.reply(400, {"error": "prompt must be a non-empty string"})
+            return
+
+        if len(prompt) > MAX_PROMPT_LENGTH:
+            self.reply(
+                413,
+                {
+                    "error": "prompt too large",
+                    "max_length": MAX_PROMPT_LENGTH,
+                },
+            )
+            return
+
+        command = "develop" if self.path == "/develop" else "ask"
+
+        try:
+            r = subprocess.run(
+                [str(BASE / "bin/corvus"), command, prompt],
+                capture_output=True,
+                text=True,
+                timeout=ASK_TIMEOUT,
+            )
+        except subprocess.TimeoutExpired:
+            self.reply(504, {"error": "inference timeout"})
+            return
+        except Exception as e:
+            self.reply(500, {"error": "subprocess failure", "detail": str(e)})
+            return
+
+        if r.returncode != 0:
+            self.reply(
+                502,
+                {
+                    "error": f"{command} pipeline failed",
+                    "code": r.returncode,
+                    "stderr": r.stderr.strip(),
+                },
+            )
+            return
+
+        self.reply(
+            200,
+            {
+                "command": command,
+                "code": 0,
+                "output": r.stdout,
+            },
+        )
+
+    def log_message(self, format, *args):
+        pass
+
+
+if __name__ == "__main__":
+    print(f"CORVUS API: http://{HOST}:{PORT}")
+    HTTPServer((HOST, PORT), Handler).serve_forever()

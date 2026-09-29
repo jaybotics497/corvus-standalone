@@ -1,0 +1,110 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+BASE="$HOME/corvus"
+SERVER="$BASE/api/server.py"
+PIDFILE="$BASE/tmp/api.pid"
+LOGFILE="$BASE/logs/api.log"
+
+mkdir -p "$BASE/tmp" "$BASE/logs"
+
+get_pid() {
+    [ -f "$PIDFILE" ] || return 1
+    PID="$(cat "$PIDFILE" 2>/dev/null)"
+    [ -n "$PID" ] || return 1
+    kill -0 "$PID" 2>/dev/null || return 1
+
+    CMD="$(tr '\0' ' ' < "/proc/$PID/cmdline" 2>/dev/null)"
+    case "$CMD" in
+        *"$SERVER"*) return 0 ;;
+        *) return 1 ;;
+    esac
+}
+
+cleanup_stale() {
+    if [ -f "$PIDFILE" ] && ! get_pid; then
+        rm -f "$PIDFILE"
+    fi
+}
+
+start_api() {
+    cleanup_stale
+
+    if get_pid; then
+        echo "CORVUS API already running: PID $PID"
+        return 0
+    fi
+
+    nohup python3 "$SERVER" >>"$LOGFILE" 2>&1 </dev/null &
+    PID=$!
+    echo "$PID" > "$PIDFILE"
+
+    sleep 1
+
+    if get_pid; then
+        echo "CORVUS API started: PID $PID"
+        return 0
+    fi
+
+    echo "CORVUS API failed to start."
+    rm -f "$PIDFILE"
+    tail -n 20 "$LOGFILE" 2>/dev/null
+    return 1
+}
+
+stop_api() {
+    cleanup_stale
+
+    if ! get_pid; then
+        echo "CORVUS API already stopped."
+        return 0
+    fi
+
+    OLDPID="$PID"
+    kill "$OLDPID" 2>/dev/null
+
+    for _ in 1 2 3 4 5; do
+        if ! kill -0 "$OLDPID" 2>/dev/null; then
+            rm -f "$PIDFILE"
+            echo "CORVUS API stopped."
+            return 0
+        fi
+        sleep 1
+    done
+
+    echo "CORVUS API did not stop cleanly: PID $OLDPID"
+    return 1
+}
+
+status_api() {
+    cleanup_stale
+
+    if get_pid; then
+        echo "CORVUS API: RUNNING"
+        echo "PID: $PID"
+        echo "URL: http://127.0.0.1:8765"
+        return 0
+    fi
+
+    echo "CORVUS API: STOPPED"
+    return 1
+}
+
+case "${1:-status}" in
+    start)
+        start_api
+        ;;
+    stop)
+        stop_api
+        ;;
+    restart)
+        stop_api || exit $?
+        start_api
+        ;;
+    status)
+        status_api
+        ;;
+    *)
+        echo "Usage: corvus-api {start|stop|restart|status}"
+        exit 2
+        ;;
+esac

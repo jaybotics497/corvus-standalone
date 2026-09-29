@@ -16,6 +16,10 @@ case "$1" in
     [ -d "$HOME/corvus-dev" ] && echo "Workspace: READY" || echo "Workspace: MISSING"
     [ -x "$HOME/corvus-dev/dev-manager.py" ] && echo "Manager: READY" || echo "Manager: MISSING"
     ;;
+  develop)
+    shift
+    exec "$HOME/corvus-dev/objective-candidate.sh" "$@"
+    ;;
   version)
     echo "$CORVUS_VERSION"
     ;;
@@ -45,6 +49,10 @@ case "$1" in
   ask)
     shift
     exec "$HOME/corvus/bin/corvus-ask.py" "$@"
+    ;;
+  api)
+    shift
+    exec "$HOME/corvus/bin/corvus-api" "$@"
     ;;
   pipeline)
     shift

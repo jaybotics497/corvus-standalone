@@ -1,52 +1,159 @@
 #!/usr/bin/env python3
+
 from pathlib import Path
-import sqlite3,sys,subprocess,re
+import sqlite3
+import sys
+import subprocess
+import re
 
-BASE=Path.home()/"corvus"
-DB=BASE/"data/index/corvus.db"
+BASE = Path.home() / "corvus"
+DB = BASE / "data/index/corvus.db"
+INFER = BASE / "bin/infer"
 
-query=" ".join(sys.argv[1:]).strip()
+args = sys.argv[1:]
+
+if not args:
+    print("USAGE: corvus ask [general|grounded|dev] QUESTION")
+    sys.exit(1)
+
+mode = "general"
+
+if args[0].lower() in ("general", "grounded", "dev"):
+    mode = args.pop(0).lower()
+
+query = " ".join(args).strip()
+
 if not query:
- print("USAGE: corvus-ask.py QUESTION")
- sys.exit(1)
+    print("CORVUS: question required.")
+    sys.exit(1)
 
-terms=re.findall(r"[A-Za-z0-9_]+",query)
-fts_query=" OR ".join(terms)
 
-con=sqlite3.connect(DB)
-rows=con.execute("""
- SELECT c.source,c.page,c.section,c.content
- FROM chunks_fts f
- JOIN chunks c ON c.id=f.rowid
- WHERE chunks_fts MATCH ?
- ORDER BY bm25(chunks_fts)
- LIMIT 3
-""",(fts_query,)).fetchall()
+def infer(prompt):
+    result = subprocess.run(
+        [str(INFER), prompt],
+        text=True,
+        capture_output=True
+    )
+
+    if result.stdout:
+        print(result.stdout.strip())
+
+    if result.returncode != 0:
+        if result.stderr:
+            print(result.stderr.strip(), file=sys.stderr)
+        sys.exit(result.returncode)
+
+
+# --------------------------------------------------
+# GENERAL MODE
+# --------------------------------------------------
+
+if mode == "general":
+
+    prompt = f"""You are CORVUS, a local AI assistant running on Android through Termux.
+
+Answer the user's request directly and concisely.
+Do not invent system capabilities, files, commands, or facts you do not know.
+If the request depends on CORVUS-specific implementation details that were not supplied, state that those details must be inspected.
+
+USER:
+{query}
+
+ANSWER:
+"""
+
+    infer(prompt)
+    sys.exit(0)
+
+
+# --------------------------------------------------
+# DEV MODE
+# --------------------------------------------------
+
+if mode == "dev":
+
+    prompt = f"""You are CORVUS operating in DEVELOPMENT MODE.
+
+Known environment:
+- Android device
+- Termux user-space environment
+- CORVUS base directory: ~/corvus
+- CORVUS development directory: ~/corvus-dev
+- Local Python HTTP API: 127.0.0.1:8765
+- Local inference uses llama.cpp
+- Model: Qwen2.5 1.5B Instruct GGUF
+- Do NOT assume systemd, sudo, apt, apk, root access, or a conventional Linux init system.
+- Proposed commands must be appropriate for Android and Termux.
+- Do not claim you inspected a file unless its contents were supplied.
+- Prefer diagnosis and reversible changes before destructive modifications.
+
+Development request:
+
+{query}
+
+Provide a concrete technical answer. Clearly identify anything that requires inspecting the actual CORVUS source before implementation.
+"""
+
+    infer(prompt)
+    sys.exit(0)
+
+
+# --------------------------------------------------
+# GROUNDED MODE
+# --------------------------------------------------
+
+terms = re.findall(r"[A-Za-z0-9_]+", query)
+
+if not terms:
+    print("CORVUS: no searchable terms.")
+    sys.exit(2)
+
+fts_query = " OR ".join(terms)
+
+con = sqlite3.connect(DB)
+
+rows = con.execute(
+    """
+    SELECT c.source,c.page,c.section,c.content
+    FROM chunks_fts f
+    JOIN chunks c ON c.id=f.rowid
+    WHERE chunks_fts MATCH ?
+    ORDER BY bm25(chunks_fts)
+    LIMIT 3
+    """,
+    (fts_query,)
+).fetchall()
+
 con.close()
 
 print(f"RETRIEVED: {len(rows)}")
 
 if not rows:
- print("CORVUS: no relevant library sources found.")
- print("ANSWER BLOCKED: no supporting source.")
- sys.exit(2)
+    print("CORVUS: no relevant library sources found.")
+    print("ANSWER BLOCKED: no supporting source.")
+    sys.exit(2)
 
-context=[]
+context = []
 
-for i,(source,page,section,content) in enumerate(rows,1):
- cite=f"[SOURCE {i}: {source}"
- if page is not None:
-  cite+=f", page {page}"
- if section:
-  cite+=f", section {section}"
- cite+="]"
- context.append(f"{cite}\n{content}")
+for i, (source, page, section, content) in enumerate(rows, 1):
 
-evidence="\n\n".join(context)
+    cite = f"[SOURCE {i}: {source}"
 
-prompt=f"""Answer the question using ONLY the supplied library evidence.
+    if page is not None:
+        cite += f", page {page}"
+
+    if section:
+        cite += f", section {section}"
+
+    cite += "]"
+
+    context.append(f"{cite}\n{content}")
+
+evidence = "\n\n".join(context)
+
+prompt = f"""Answer the question using ONLY the supplied library evidence.
 If the evidence is insufficient, state that clearly.
-Every factual claim MUST include its supporting label such as [SOURCE 1]. Begin your final answer with <ANSWER> and end it with </ANSWER>.
+Every factual claim must include its supporting source label.
 
 QUESTION:
 {query}
@@ -56,29 +163,5 @@ LIBRARY EVIDENCE:
 """
 
 print("GROUNDING: READY")
-result=subprocess.run(
- [str(BASE/"bin/infer"),prompt],
- text=True,
- capture_output=True
-)
-raw=result.stdout
-matches=re.findall(r"<ANSWER>\s*(.*?)\s*</ANSWER>",raw,re.DOTALL)
-answer=matches[-1].strip() if matches else raw.strip()
 
-if result.returncode!=0:
- print(result.stderr.strip())
- sys.exit(result.returncode)
-
-print(answer)
-
-if "[SOURCE " not in answer:
- source,page,section,_=rows[0]
- cite=f"[SOURCE 1: {source}"
- if page is not None:
-  cite+=f", page {page}"
- if section:
-  cite+=f", section {section}"
- cite+="]"
- print(cite)
-
-sys.exit(0)
+infer(prompt)
