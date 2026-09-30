@@ -1,6 +1,6 @@
 #!/data/data/com.termux/files/usr/bin/bash
 set -euo pipefail
-DEV="$HOME/corvus-dev"; MANAGER="$DEV/android-candidate-manager.sh"; GEN="$DEV/generate-android-operations-v2.py"; TXN="$DEV/android-operation-transaction.py"; OPS="$DEV/changes/android-operations.json"
+DEV="$HOME/corvus/dev-engine"; MANAGER="$DEV/android-candidate-manager.sh"; GEN="$DEV/generate-android-operations-v2.py"; TXN="$DEV/android-operation-transaction.py"; OPS="$DEV/changes/android-operations.json"
 OBJECTIVE="$*"
 [ -n "$OBJECTIVE" ] || { echo 'CORVUS DEVELOP: BLOCKED - objective required'; exit 300; }
 command -v termux-wake-lock >/dev/null 2>&1 && termux-wake-lock || true

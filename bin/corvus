@@ -18,7 +18,7 @@ case "$1" in
     ;;
   develop)
     shift
-    exec "$HOME/corvus-dev/objective-candidate.sh" "$@"
+    exec "$HOME/corvus/bin/corvus-develop" "$@"
     ;;
   version)
     echo "$CORVUS_VERSION"
