@@ -1,0 +1,82 @@
+#!/data/data/com.termux/files/usr/bin/bash
+
+BASE="${CORVUS_BASE:-$HOME/corvus}"
+source "$BASE/config/corvus.env"
+source "$BASE/config/runtime.env"
+
+MODEL="$BASE/data/models/qwen2.5-1.5b-instruct-q4_k_m.gguf"
+
+avail_mb() {
+    awk '/MemAvailable:/ {printf "%d", $2/1024}' /proc/meminfo
+}
+
+case "$1" in
+  dev-status)
+    echo "=== CORVUS DEVELOPMENT ==="
+    [ -d "$HOME/corvus-dev" ] && echo "Workspace: READY" || echo "Workspace: MISSING"
+    [ -x "$HOME/corvus-dev/dev-manager.py" ] && echo "Manager: READY" || echo "Manager: MISSING"
+    ;;
+  version)
+    echo "$CORVUS_VERSION"
+    ;;
+  runtime)
+    shift
+    if [ -z "$1" ]; then
+        echo "Context: $CORVUS_CONTEXT"
+        echo "Threads: $CORVUS_THREADS"
+    else
+        exec "$BASE/bin/runtime-manager.py" "$1"
+    fi
+    ;;
+  resource)
+    echo "=== CORVUS RESOURCES ==="
+    awk '/MemAvailable:/ {printf "RAM available: %d MB\n", $2/1024}' /proc/meminfo
+    awk '/SwapTotal:/ {t=$2} /SwapFree:/ {printf "Swap available: %d / %d MB\n", $2/1024, t/1024}' /proc/meminfo
+    df -k "$HOME/storage/shared" | awk 'NR==2 {printf "Internal storage: %d MB free / %d MB total\n", $4/1024, $2/1024}'
+    du -sm "$BASE" | awk '{printf "CORVUS storage usage: %d MB\n", $1}'
+    ;;
+  help)
+    shift
+    ~/corvus/bin/corvus-help
+    ;;
+  library)
+    shift
+    ~/corvus/bin/library-stats.py
+    ;;
+  search)
+    shift
+    ~/corvus/bin/search-library.py "$@"
+    ;;
+  ask)
+    shift
+    exec "$HOME/corvus/bin/corvus-ask.py" "$@"
+    ;;
+  pipeline)
+    shift
+    ~/corvus/bin/corvus-pipeline "$@"
+    ;;
+    status|diagnostics)
+        RAM=$(avail_mb)
+        echo "=== CORVUS V1 ==="
+        echo "RAM available: ${RAM} MB"
+
+        if [ "$RAM" -lt "$CORVUS_CRITICAL_RAM_MB" ]; then
+            echo "State: CRITICAL"
+        elif [ "$RAM" -lt "$CORVUS_LOW_RAM_MB" ]; then
+            echo "State: CONSTRAINED"
+        else
+            echo "State: NORMAL"
+        fi
+
+        [ -f "$MODEL" ] && echo "Model: READY" || echo "Model: MISSING"
+        ;;
+
+    health)
+        "$BASE/bin/health"
+        ;;
+
+    *)
+        echo "CORVUS V1"
+        echo "Commands: status | health"
+        ;;
+esac

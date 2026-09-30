@@ -1,0 +1,24 @@
+#!/data/data/com.termux/files/usr/bin/bash
+set -e
+
+ROOT="$HOME/corvus-dev/staging/corvus"
+
+echo "=== CORVUS REPOSITORY ==="
+find "$ROOT" -maxdepth 2 -type f \
+  ! -path '*/.git/*' \
+  | sed "s|$ROOT/||" \
+  | sort
+
+echo
+echo "=== RELEVANT SOURCE ==="
+
+for f in \
+  api/server.py \
+  bin/corvus \
+  config/corvus.env
+do
+  if [ -f "$ROOT/$f" ]; then
+    echo "--- $f ---"
+    cat "$ROOT/$f"
+  fi
+done

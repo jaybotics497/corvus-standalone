@@ -1,0 +1,59 @@
+#!/data/data/com.termux/files/usr/bin/bash
+set -e
+
+PROMPT="$*"
+
+if [ -z "$PROMPT" ]; then
+    echo "CORVUS PLANNER: prompt required" >&2
+    exit 1
+fi
+
+python - "$PROMPT" <<'PY'
+import json
+import sys
+import urllib.request
+import urllib.error
+
+prompt = sys.argv[1]
+
+payload = json.dumps({
+    "prompt": prompt,
+    "n_predict": 96,
+    "temperature": 0
+}).encode()
+
+request = urllib.request.Request(
+    "http://127.0.0.1:8766/completion",
+    data=payload,
+    headers={"Content-Type": "application/json"},
+    method="POST",
+)
+
+try:
+    with urllib.request.urlopen(request, timeout=120) as response:
+        result = json.load(response)
+
+except urllib.error.HTTPError as e:
+    print(f"CORVUS PLANNER: server HTTP error {e.code}", file=sys.stderr)
+    sys.exit(2)
+
+except urllib.error.URLError as e:
+    print(f"CORVUS PLANNER: inference server unavailable: {e.reason}", file=sys.stderr)
+    sys.exit(3)
+
+except TimeoutError:
+    print("CORVUS PLANNER: inference timed out", file=sys.stderr)
+    sys.exit(4)
+
+except Exception as e:
+    print(f"CORVUS PLANNER: inference failure: {e}", file=sys.stderr)
+    sys.exit(5)
+
+content = result.get("content")
+
+if not isinstance(content, str) or not content.strip():
+    print("CORVUS PLANNER: empty inference response", file=sys.stderr)
+    sys.exit(6)
+
+print(content.strip())
+PY

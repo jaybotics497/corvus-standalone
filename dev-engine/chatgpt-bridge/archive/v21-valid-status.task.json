@@ -1,0 +1,10 @@
+{
+  "protocol": "corvus-chatgpt-bridge",
+  "version": 1,
+  "task_id": "v21-valid-status",
+  "created_at": 1790694614,
+  "action": "status",
+  "objective": "Report CORVUS validation and staging status.",
+  "approval_required": true,
+  "sha256": "c4d4355e34ac16d01c981e4e4c37160a8974bbfc8bc5c9b0b971aacdd504bacc"
+}

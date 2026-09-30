@@ -1,0 +1,16 @@
+#!/data/data/com.termux/files/usr/bin/bash
+ROOT="$HOME/corvus-dev/staging/corvus"
+echo "=== CORVUS REPOSITORY ==="
+find "$ROOT" -maxdepth 2 -type f \
+  ! -path '*/.git/*' \
+  | sed "s|$ROOT/||" \
+  | sort
+echo
+echo "=== CONFIG ==="
+cat "$ROOT/config/corvus.env"
+echo
+echo "=== CORE SOURCE ==="
+for f in bin/corvus bin/corvus-help config/corvus.env; do
+ echo "--- $f ---"
+ cat "$ROOT/$f"
+done

@@ -1,0 +1,156 @@
+#!/data/data/com.termux/files/usr/bin/bash
+set -e
+
+STAGE="$HOME/corvus-dev/staging/corvus"
+TEST="$1"
+
+case "$TEST" in
+  shell-syntax)
+    bash -n "$STAGE/bin/corvus"
+    ;;
+
+  controller-help)
+    "$STAGE/bin/corvus" help >/dev/null
+    ;;
+
+  controller-version)
+    "$STAGE/bin/corvus" version >/dev/null
+    ;;
+
+  controller-diagnostics)
+    OUT="$("$STAGE/bin/corvus" diagnostics)"
+    echo "$OUT" | grep -q '^=== CORVUS V1 ===$'
+    echo "$OUT" | grep -q '^RAM available:'
+    echo "$OUT" | grep -q '^State:'
+    echo "$OUT" | grep -q '^Model:'
+    ;;
+
+  controller-runtime)
+    OUT="$("$STAGE/bin/corvus" runtime)"
+    echo "$OUT" | grep -q '^Context: 2048$'
+    echo "$OUT" | grep -q '^Threads: 4$'
+
+    TEST_BASE="$HOME/corvus-dev/tmp/runtime-test"
+    rm -rf "$TEST_BASE"
+    mkdir -p "$TEST_BASE/bin" "$TEST_BASE/config"
+
+    cp "$STAGE/bin/corvus" "$TEST_BASE/bin/corvus"
+    sed -i "s|BASE=\"\$HOME/corvus\"|BASE=\"$TEST_BASE\"|" "$TEST_BASE/bin/corvus"
+
+    printf '%s\n'       'CORVUS_VERSION=0.1'       'CORVUS_CONTEXT=1537'       'CORVUS_THREADS=3'       > "$TEST_BASE/config/corvus.env"
+
+    cp "$HOME/corvus/config/runtime.env" "$TEST_BASE/config/runtime.env"
+
+    OUT="$("$TEST_BASE/bin/corvus" runtime)"
+    echo "$OUT" | grep -q '^Context: 1537$'
+    echo "$OUT" | grep -q '^Threads: 3$'
+
+    rm -rf "$TEST_BASE"
+    ;;
+
+  controller-resource)
+    OUT="$("$STAGE/bin/corvus" resource)"
+    echo "$OUT" | grep -q '^=== CORVUS RESOURCES ===$'
+    echo "$OUT" | grep -q '^RAM available: [0-9]'
+    echo "$OUT" | grep -q '^Swap available: [0-9]'
+    echo "$OUT" | grep -q '^Internal storage: [0-9]'
+    echo "$OUT" | grep -q '^CORVUS storage usage: [0-9]'
+    ;;
+
+  ui-home)
+    FILE="$STAGE/ui/index.html"
+    [ -f "$FILE" ]
+    grep -q '<title>CORVUS</title>' "$FILE"
+    grep -q 'class="composer"' "$FILE"
+    grep -q '<nav aria-label="Primary navigation">' "$FILE"
+    grep -q 'Message CORVUS' "$FILE"
+    grep -q 'Private. Local. Ready.' "$FILE"
+    ;;
+
+  ui-chat)
+    FILE="$STAGE/ui/index.html"
+    [ -f "$FILE" ]
+    grep -q 'class="raven-mark"' "$FILE"
+    grep -q 'PRIVATE · LOCAL · READY' "$FILE"
+    grep -q '<small>CORVUS</small>' "$FILE"
+    grep -q 'class="composer"' "$FILE"
+    grep -q '<nav aria-label="Primary navigation">' "$FILE"
+    ;;
+  ui-chat-visual)
+    FILE="$STAGE/ui/style.css"
+    [ -f "$FILE" ]
+    grep -q '/\* Chat v1 visual system \*/' "$FILE"
+    grep -q 'justify-content:flex-end;' "$FILE"
+    grep -q 'filter:drop-shadow' "$FILE"
+    grep -q 'background:linear-gradient(145deg,#151a1e,#101416);' "$FILE"
+    grep -q '.message.corvus small {' "$FILE"
+    grep -q '.composer:focus-within {' "$FILE"
+    ;;
+
+  ui-navigation)
+    FILE="$STAGE/ui/index.html"
+    [ -f "$FILE" ]
+    grep -q '<nav aria-label="Primary navigation">' "$FILE"
+    grep -q 'aria-current="page"' "$FILE"
+    [ "$(grep -c 'type="button"' "$FILE")" -ge 5 ]
+    grep -q '<span>Chat</span>' "$FILE"
+    grep -q '<span>Library</span>' "$FILE"
+    grep -q '<span>Study</span>' "$FILE"
+    grep -q '<span>Tools</span>' "$FILE"
+    ;;
+
+  ui-pwa)
+    INDEX="$STAGE/ui/index.html"
+    MANIFEST="$STAGE/ui/manifest.webmanifest"
+    WORKER="$STAGE/ui/service-worker.js"
+
+    [ -f "$INDEX" ]
+    [ -f "$MANIFEST" ]
+    [ -f "$WORKER" ]
+
+    grep -q 'rel="manifest" href="manifest.webmanifest"' "$INDEX"
+    grep -q 'name="theme-color"' "$INDEX"
+    grep -q 'serviceWorker.register("service-worker.js")' "$INDEX"
+
+    grep -q 'class="raven-mark"' "$INDEX"
+    grep -q 'PRIVATE · LOCAL · READY' "$INDEX"
+    grep -q '<nav aria-label="Primary navigation">' "$INDEX"
+    grep -q '<span>Chat</span>' "$INDEX"
+    grep -q '<span>Library</span>' "$INDEX"
+    grep -q '<span>Study</span>' "$INDEX"
+    grep -q '<span>Tools</span>' "$INDEX"
+
+    python - "$MANIFEST" <<'PYTEST'
+import json
+import sys
+
+with open(sys.argv[1]) as f:
+    data = json.load(f)
+
+assert data["name"] == "CORVUS"
+assert data["short_name"] == "CORVUS"
+assert data["start_url"] == "./"
+assert data["scope"] == "./"
+assert data["display"] == "standalone"
+assert data["theme_color"] == "#0b0d0e"
+assert data["background_color"] == "#0b0d0e"
+PYTEST
+
+    grep -q 'const CACHE = "corvus-ui-v1";' "$WORKER"
+    grep -q '"./index.html"' "$WORKER"
+    grep -q '"./style.css"' "$WORKER"
+    grep -q '"./manifest.webmanifest"' "$WORKER"
+    grep -q 'self.addEventListener("install"' "$WORKER"
+    grep -q 'self.addEventListener("activate"' "$WORKER"
+    grep -q 'self.addEventListener("fetch"' "$WORKER"
+    ;;
+
+  *)
+    echo "TRUSTED TEST: BLOCKED - unknown test"
+    echo "TEST: $TEST"
+    exit 120
+    ;;
+esac
+
+echo "TRUSTED TEST: PASS"
+echo "TEST: $TEST"

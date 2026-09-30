@@ -1,0 +1,22 @@
+#!/data/data/com.termux/files/usr/bin/bash
+set -e
+
+ROOT="$HOME/corvus-dev/staging/corvus"
+
+echo "=== REPOSITORY FILES ==="
+find "$ROOT" -maxdepth 2 -type f \
+  ! -path '*/.git/*' \
+  | sed "s|$ROOT/||" \
+  | sort
+
+echo
+echo "=== API SOURCE ==="
+cat "$ROOT/api/server.py"
+
+echo
+echo "=== EXISTING ASK ROUTE ==="
+grep -A2 -B1 '^[[:space:]]*ask)' "$ROOT/bin/corvus" || true
+
+echo
+echo "=== CONFIG ==="
+cat "$ROOT/config/corvus.env"

@@ -1,0 +1,80 @@
+CORVUS FULL SYSTEM BUILD AUTHORIZATION
+
+STATUS: APPROVED
+AUTHORITY: USER
+MODE: BUILD-TEST-REPAIR-APPLY
+
+PRIMARY OBJECTIVE:
+
+Build and apply CORVUS as a complete RUNNING ANDROID APPLICATION on this phone.
+
+The finished result must not be a mock-up, specification, prototype UI, or collection of disconnected components.
+
+Inspect the existing CORVUS core, Android project, runtime, API, development tools and all existing working components.
+
+Integrate them into one functioning CORVUS phone application.
+
+REQUIRED OUTCOME:
+
+- CORVUS runs as an Android application on the phone.
+- CORVUS runtime/model is connected and usable through the application.
+- Chat input and output work.
+- Memory and context functionality is integrated.
+- Existing permitted CORVUS tools and functions are integrated.
+- Development functionality is accessible through the application.
+- Runtime/service status is functional.
+- Library, Study, Tools and Development sections provide real functionality rather than decorative UI.
+- Android application and CORVUS backend/runtime communicate correctly.
+- Existing working components are preserved and integrated.
+- Missing components required for end-to-end operation are implemented.
+- Recoverable development, build and runtime failures are diagnosed and repaired.
+- Successful validated development changes are applied.
+- The complete Android application is built into an installable APK.
+- The assembled system is tested end-to-end.
+
+AUTHORIZED DEVELOPMENT LOOP:
+
+INSPECT
+-> BUILD
+-> INTEGRATE
+-> TEST
+-> REPAIR
+-> RETEST
+-> APPLY
+-> BUILD APK
+-> VERIFY
+-> REPORT
+
+CORVUS is authorized to create, edit, replace, refactor, integrate, test and apply ordinary reversible CORVUS project changes required to complete this objective.
+
+Do not stop at proposals, plans, staged candidates or descriptions when permitted implementation work can be performed.
+
+Prioritize a COMPLETE WORKING END-TO-END CORVUS PHONE SYSTEM over polishing isolated components.
+
+MANDATORY BOUNDARIES:
+
+- Never expose credentials.
+- Never expose API bearer tokens.
+- Never expose OAuth tokens.
+- Never expose private keys or keystores.
+- Signing material remains outside model-controlled development context.
+- Do not create an unrestricted remote shell.
+- Do not expose the local CORVUS service publicly.
+- Do not bypass essential security controls merely to pass tests.
+- Do not destroy unrelated user data.
+- Do not modify unrelated applications or system data.
+- Do not silently grant additional operating-system permissions.
+- Consequential irreversible external actions require user approval.
+
+FINAL DELIVERABLE:
+
+Produce a working installable CORVUS Android APK backed by the functional CORVUS system.
+
+Report:
+- what was built
+- what was integrated
+- what was applied
+- tests passed
+- tests failed
+- remaining failures
+- exact APK and artifact locations

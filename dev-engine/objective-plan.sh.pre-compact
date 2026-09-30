@@ -1,0 +1,59 @@
+#!/data/data/com.termux/files/usr/bin/bash
+set -e
+
+DEV="$HOME/corvus-dev"
+OBJECTIVE="$*"
+
+[ -n "$OBJECTIVE" ] || {
+ echo "OBJECTIVE PLAN: BLOCKED - objective required"
+ exit 70
+}
+
+"$DEV/check-objective.py" "$OBJECTIVE"
+
+CONTEXT="$("$DEV/repo-context.sh")"
+PLANNER_RULES="$(cat "$DEV/planner-prompt.txt")"
+
+PROMPT="$PLANNER_RULES
+
+You are the planning component of CORVUS Development Manager.
+
+Current CORVUS repository context:
+$CONTEXT
+
+Objective:
+$OBJECTIVE
+
+Rules:
+- Do not write code.
+- Do not execute commands.
+- Do not invent dependencies.
+- Propose one small, testable change.
+- Prefer existing CORVUS architecture.
+- If the objective says add or create, do not rename, remove, delete, or replace existing functionality.
+- Do not modify unrelated commands or features.
+- TARGET must name the exact repository file to change, such as bin/corvus.
+- TEST must directly test the requested objective.
+- RISK must identify a realistic failure mode.
+- Keep the response concise.
+
+OUTPUT CONTRACT:
+Return exactly five plain-text lines and nothing else.
+Do not use Markdown, headings, bullets, code blocks, patches, diffs, or examples.
+Each field must occupy exactly one line.
+Use these exact labels including the colon:
+
+SUMMARY: <one-line summary>
+TARGET: <one repository path>
+CHANGE: <one-line description only>
+TEST: <one-line test description only>
+RISK: <one-line realistic risk>
+
+Do not output any text before SUMMARY: or after RISK:."
+
+echo "=== CORVUS DEVELOPMENT PLAN ==="
+
+"$DEV/planner-infer.sh" "$PROMPT"
+
+echo
+echo "=== PLAN COMPLETE ==="

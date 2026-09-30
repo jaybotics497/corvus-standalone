@@ -1,0 +1,51 @@
+CORVUS UI V1
+
+TARGET
+Mobile-first local CORVUS interface.
+
+VISUAL
+Background: near-black / charcoal
+Panels: dark slate
+Primary accent: muted antique gold
+Text: warm off-white
+Secondary text: muted grey
+Imagery: raven / forest / mountain atmosphere
+Style: cinematic, restrained, minimal
+
+HOME
+Header:
+CORVUS
+System state indicator
+
+Primary area:
+Chat conversation
+Message input
+Send control
+
+NAVIGATION
+Chat
+Library
+Study
+Tools
+Development
+Settings
+
+TOOLS
+Resource status
+Diagnostics
+Model status
+
+DEVELOPMENT
+Current objective
+Lifecycle status
+Candidate information
+Approve control
+Reports
+
+RULES
+Touch-friendly controls
+No arbitrary shell execution
+No external network dependency
+No heavy frontend framework
+API is the only control boundary
+Core and UI remain separate

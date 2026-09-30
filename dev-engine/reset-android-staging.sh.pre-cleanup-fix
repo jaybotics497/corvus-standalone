@@ -1,0 +1,35 @@
+#!/data/data/com.termux/files/usr/bin/bash
+set -euo pipefail
+
+DEV="$HOME/corvus-dev"
+LIVE="$DEV/android/corvus-0.5"
+STAGE="$DEV/staging/android/corvus"
+
+[ -d "$LIVE" ] || {
+    echo "ANDROID STAGING: BLOCKED - live project missing"
+    exit 190
+}
+
+rm -rf "$STAGE"
+mkdir -p "$STAGE"
+
+# Copy source inputs only. Never inherit old build debris.
+cp "$LIVE/AndroidManifest.xml" "$STAGE/"
+cp -R "$LIVE/src" "$STAGE/"
+cp -R "$LIVE/res" "$STAGE/"
+cp -R "$LIVE/assets" "$STAGE/"
+cp "$LIVE/corvus-debug.keystore" "$STAGE/"
+
+# Remove historical/backup files from staging.
+find "$STAGE" -type f \
+  \( -name '*.pre-*' \
+     -o -name '*.backup' \
+     -o -name '*.health-pass' \
+     -o -name '*.working' \
+     -o -name '*.chat-backup' \
+     -o -name '*.full-chat' \) \
+  -delete
+
+echo "ANDROID STAGING: PASS"
+echo "LIVE: $LIVE"
+echo "STAGE: $STAGE"

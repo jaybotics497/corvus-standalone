@@ -1,0 +1,12 @@
+{
+  "protocol": "corvus-chatgpt-bridge",
+  "version": 1,
+  "task_id": "20260929-152938-8d0f2b90886d",
+  "action": "status",
+  "completed_at": 1790692181,
+  "exit_code": 0,
+  "approval_required": true,
+  "auto_promoted": false,
+  "output": "=== VALIDATION ===\nVALIDATION: PASS\n\n=== STAGING ===\n",
+  "sha256": "f93706a3cfe18a38ae4705a7811d2e872eb388b159c9f1c3e1f17abc6975fa47"
+}

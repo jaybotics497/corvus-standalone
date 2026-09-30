@@ -1,0 +1,15 @@
+#!/data/data/com.termux/files/usr/bin/bash
+set -e
+
+ROOT="$HOME/corvus-dev/staging/corvus"
+
+echo "=== API SOURCE: api/server.py ==="
+cat "$ROOT/api/server.py"
+
+echo
+echo "=== EXISTING ASK ROUTE: bin/corvus ==="
+grep -A2 -B1 '^[[:space:]]*ask)' "$ROOT/bin/corvus" || true
+
+echo
+echo "=== CONFIG: config/corvus.env ==="
+cat "$ROOT/config/corvus.env"

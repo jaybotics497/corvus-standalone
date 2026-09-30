@@ -1,0 +1,203 @@
+#!/data/data/com.termux/files/usr/bin/python3
+
+from pathlib import Path
+import json
+import os
+import subprocess
+import sys
+
+HOME = Path.home()
+DEV = HOME / "corvus-dev"
+STAGE = DEV / "staging/android/corvus"
+INFER = HOME / "corvus/bin/infer"
+OUTPUT = DEV / "changes/android-operations.json"
+RAW = DEV / "changes/android-operations-raw.txt"
+
+ALLOWED = (
+    "AndroidManifest.xml",
+    "assets/style.css",
+)
+
+OPS = {
+    "replace_exact",
+    "insert_before",
+    "insert_after",
+}
+
+if len(sys.argv) < 2:
+    print("ANDROID OP GENERATOR: BLOCKED - objective required")
+    raise SystemExit(260)
+
+objective = " ".join(sys.argv[1:]).strip()
+
+sources = []
+
+for relative in ALLOWED:
+    p = STAGE / relative
+
+    if not p.is_file():
+        print("ANDROID OP GENERATOR: BLOCKED - missing:", relative)
+        raise SystemExit(261)
+
+    sources.append(
+        f'<CURRENT_FILE path="{relative}">\n'
+        f'{p.read_text()}\n'
+        f'</CURRENT_FILE>'
+    )
+
+prompt = f"""
+You are CORVUS planning a bounded Android source modification.
+
+OBJECTIVE:
+{objective}
+
+You DO NOT execute changes.
+You DO NOT return complete files.
+You DO NOT return shell commands.
+You return only deterministic edit operations.
+
+The trusted edit engine supports:
+
+replace_exact:
+- expected must occur exactly once.
+- value replaces expected.
+
+insert_before:
+- expected must occur exactly once.
+- value is inserted immediately before expected.
+
+insert_after:
+- expected must occur exactly once.
+- value is inserted immediately after expected.
+
+Rules:
+
+- Use only supplied authorized paths.
+- Maximum 4 operations.
+- Every expected string must be copied EXACTLY from CURRENT_FILE.
+- Keep edits minimal.
+- Do not alter package identity com.corvus.app.
+- Do not alter signing configuration.
+- Do not create or delete files.
+- The resulting Android candidate must use:
+  android:versionName="0.6"
+  android:versionCode="16"
+- Therefore include bounded operations necessary to update the manifest.
+- Do not claim anything was built or tested.
+- Trusted tooling performs execution, compilation and verification.
+
+Return STRICT JSON only.
+
+Schema:
+
+{{
+  "objective": "...",
+  "operations": [
+    {{
+      "operation": "replace_exact",
+      "path": "AUTHORIZED_PATH",
+      "expected": "exact existing text",
+      "value": "replacement text"
+    }}
+  ],
+  "report": {{
+    "summary": "...",
+    "capability": "..."
+  }}
+}}
+
+AUTHORIZED PATHS:
+""" + "\n".join(f"- {x}" for x in ALLOWED)
+
+prompt += "\n\nCURRENT ANDROID SOURCE:\n\n" + "\n\n".join(sources)
+
+env = dict(os.environ)
+env["CORVUS_MAX_TOKENS"] = "2048"
+
+result = subprocess.run(
+    [str(INFER), prompt],
+    capture_output=True,
+    text=True,
+    env=env,
+)
+
+RAW.parent.mkdir(parents=True, exist_ok=True)
+RAW.write_text(result.stdout)
+
+if result.returncode != 0:
+    print("ANDROID OP GENERATOR: FAILED - inference")
+    raise SystemExit(262)
+
+text = result.stdout.strip()
+
+# Tolerate accidental markdown fences, but nothing else.
+if text.startswith("```json"):
+    text = text[7:]
+    if text.endswith("```"):
+        text = text[:-3]
+elif text.startswith("```"):
+    text = text[3:]
+    if text.endswith("```"):
+        text = text[:-3]
+
+try:
+    data = json.loads(text.strip())
+except Exception as e:
+    print("ANDROID OP GENERATOR: BLOCKED - invalid JSON:", e)
+    print("RAW:", RAW)
+    raise SystemExit(263)
+
+operations = data.get("operations")
+
+if not isinstance(operations, list) or not operations:
+    print("ANDROID OP GENERATOR: BLOCKED - operations missing")
+    raise SystemExit(264)
+
+if len(operations) > 4:
+    print("ANDROID OP GENERATOR: BLOCKED - too many operations")
+    raise SystemExit(265)
+
+for i, op in enumerate(operations, 1):
+    if not isinstance(op, dict):
+        print("ANDROID OP GENERATOR: BLOCKED - malformed operation", i)
+        raise SystemExit(266)
+
+    kind = op.get("operation")
+    path = op.get("path")
+    expected = op.get("expected")
+    value = op.get("value")
+
+    if kind not in OPS:
+        print("ANDROID OP GENERATOR: BLOCKED - operation:", kind)
+        raise SystemExit(267)
+
+    if path not in ALLOWED:
+        print("ANDROID OP GENERATOR: BLOCKED - path:", path)
+        raise SystemExit(268)
+
+    if not isinstance(expected, str) or not expected:
+        print("ANDROID OP GENERATOR: BLOCKED - expected missing")
+        raise SystemExit(269)
+
+    if not isinstance(value, str):
+        print("ANDROID OP GENERATOR: BLOCKED - value invalid")
+        raise SystemExit(270)
+
+    source = (STAGE / path).read_text()
+
+    count = source.count(expected)
+
+    if count != 1:
+        print(
+            "ANDROID OP GENERATOR: BLOCKED - expected match count:",
+            path,
+            count,
+        )
+        raise SystemExit(271)
+
+OUTPUT.parent.mkdir(parents=True, exist_ok=True)
+OUTPUT.write_text(json.dumps(data, indent=2) + "\n")
+
+print("ANDROID OP GENERATOR: PASS")
+print("OPERATIONS:", len(operations))
+print("OUTPUT:", OUTPUT)

@@ -1,0 +1,10 @@
+{
+  "protocol": "corvus-chatgpt-bridge",
+  "version": 1,
+  "task_id": "20260929-152938-8d0f2b90886d",
+  "created_at": 1790692178,
+  "action": "status",
+  "objective": "Report CORVUS development status without modifying files.",
+  "approval_required": true,
+  "sha256": "c94177cf1d3cdcb72960876844914025bfacc044068292d76e611e17bee24062"
+}

@@ -1,0 +1,30 @@
+CORVUS CHATGPT TRANSPORT POLICY
+
+Transport carries bridge JSON packages only.
+
+Transport MUST NOT:
+- expose localhost or port 8765
+- provide remote shell access
+- transport bearer tokens
+- transport signing keys or private keys
+- execute received content
+- bypass Bridge V2 validation
+- promote development candidates
+- modify live CORVUS directly
+
+Incoming task packages:
+transport/incoming
+-> integrity/replay checks
+-> Bridge V2 inbox
+-> Bridge V2 validation
+-> controlled runner
+
+Outgoing result packages:
+Bridge V2 outbox
+-> transport/outgoing
+-> shared transport
+
+Human approval remains mandatory for promotion.
+
+Unknown, malformed, expired, duplicate, or replayed packages
+must fail closed.

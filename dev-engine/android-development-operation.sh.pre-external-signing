@@ -1,0 +1,52 @@
+#!/data/data/com.termux/files/usr/bin/bash
+set -euo pipefail
+
+DEV="$HOME/corvus-dev"
+STAGE="$DEV/staging/android/corvus"
+MANAGER="$DEV/android-candidate-manager.sh"
+
+OBJECTIVE="$*"
+
+[ -n "$OBJECTIVE" ] || {
+    echo "ANDROID DEVELOPMENT: BLOCKED - objective required"
+    exit 220
+}
+
+ALLOWED="$DEV/tmp/android-operation-allowed.txt"
+BEFORE="$DEV/tmp/android-operation-before.txt"
+AFTER="$DEV/tmp/android-operation-after.txt"
+
+cat > "$ALLOWED" <<'FILES'
+AndroidManifest.xml
+assets/index.html
+assets/style.css
+corvus-debug.keystore
+res/values/strings.xml
+res/values/styles.xml
+src/com/corvus/app/CorvusBridge.java
+src/com/corvus/app/CorvusEngineService.java
+src/com/corvus/app/MainActivity.java
+FILES
+
+"$MANAGER" reset
+
+(
+    cd "$STAGE"
+    find . -type f |
+        sed 's|^\./||' |
+        sort
+) > "$BEFORE"
+
+diff -u "$ALLOWED" "$BEFORE" >/dev/null || {
+    echo "ANDROID DEVELOPMENT: BLOCKED - invalid initial staging"
+    exit 221
+}
+
+echo "ANDROID DEVELOPMENT: STAGING READY"
+echo "OBJECTIVE: $OBJECTIVE"
+
+# This operation intentionally stops here until an approved
+# staged-edit mechanism is connected.
+echo "ANDROID DEVELOPMENT: EDIT ENGINE NOT CONNECTED"
+echo "ANDROID DEVELOPMENT: SAFE STOP"
+exit 222

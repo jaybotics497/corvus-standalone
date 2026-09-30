@@ -1,0 +1,5 @@
+SUMMARY: test new target safety
+TARGET: bin/dev-evidence.py
+CHANGE: development evidence bridge
+TEST: evidence-bridge
+RISK: low

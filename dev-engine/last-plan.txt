@@ -1,0 +1,5 @@
+SUMMARY: Build and install CORVUS as an Android application from /data/data/com.termux/files/home/corvus-dev/CORVUS-BUILD-AUTHORIZATION.txt, integrating all necessary components.
+TARGET: bin/corvus
+CHANGE: runtime
+TEST: Check if CORVUS_MODE is correctly set to 'DEVELOP'.
+RISK: Modifying configuration files may impact existing functionalities.

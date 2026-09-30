@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+
+staging/
+snapshots/
+tmp/
+jobs/
+reports/
+plans/
+changes/
+tests/
+
+generate-operation.py.pre-*

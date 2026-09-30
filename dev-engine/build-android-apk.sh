@@ -1,0 +1,175 @@
+#!/data/data/com.termux/files/usr/bin/bash
+set -euo pipefail
+
+DEV="$HOME/corvus-dev"
+
+APP="${1:-$DEV/android/corvus-0.5}"
+OUT="${2:-$DEV/tmp/android-candidate}"
+
+ANDROID_JAR="$DEV/android/platform-34/android-34/android.jar"
+KEYSTORE="$DEV/android/signing/corvus-debug.keystore"
+
+MANIFEST="$APP/AndroidManifest.xml"
+SRC="$APP/src"
+RES="$APP/res"
+
+fail() {
+    echo "ANDROID BUILD: BLOCKED - $1"
+    exit "${2:-170}"
+}
+
+[ -d "$APP" ] || fail "application root missing" 171
+[ -f "$MANIFEST" ] || fail "manifest missing" 172
+[ -d "$SRC" ] || fail "source directory missing" 173
+[ -d "$RES" ] || fail "resource directory missing" 174
+[ -f "$ANDROID_JAR" ] || fail "android.jar missing" 175
+[ -f "$KEYSTORE" ] || fail "keystore missing" 176
+
+for tool in aapt2 javac d8 zip zipalign apksigner sha256sum; do
+    command -v "$tool" >/dev/null 2>&1 ||
+        fail "required tool missing: $tool" 177
+done
+
+VERSION="$(
+    sed -n 's/.*android:versionName="\([^"]*\)".*/\1/p' \
+        "$MANIFEST" | head -n1
+)"
+
+VERSION_CODE="$(
+    sed -n 's/.*android:versionCode="\([^"]*\)".*/\1/p' \
+        "$MANIFEST" | head -n1
+)"
+
+PACKAGE="$(
+    sed -n 's/.*package="\([^"]*\)".*/\1/p' \
+        "$MANIFEST" | head -n1
+)"
+
+[ -n "$VERSION" ] || fail "versionName missing" 178
+[ -n "$VERSION_CODE" ] || fail "versionCode missing" 179
+[ "$PACKAGE" = "com.corvus.app" ] ||
+    fail "unexpected package: $PACKAGE" 180
+
+APK="CORVUS-${VERSION}.apk"
+
+rm -rf "$OUT"
+mkdir -p \
+    "$OUT/classes" \
+    "$OUT/dex" \
+    "$OUT/compiled-res"
+
+echo "=== CORVUS ANDROID BUILD ==="
+echo "APP: $APP"
+echo "PACKAGE: $PACKAGE"
+echo "VERSION: $VERSION"
+echo "VERSION CODE: $VERSION_CODE"
+
+echo
+echo "=== RESOURCES ==="
+aapt2 compile \
+    --dir "$RES" \
+    -o "$OUT/compiled-res"
+
+aapt2 link \
+    -I "$ANDROID_JAR" \
+    --manifest "$MANIFEST" \
+    -o "$OUT/base.apk" \
+    "$OUT/compiled-res/"*.flat
+
+echo
+echo "=== JAVA ==="
+mapfile -t JAVA_FILES < <(
+    find "$SRC" -type f -name '*.java' | sort
+)
+
+[ "${#JAVA_FILES[@]}" -gt 0 ] ||
+    fail "no Java source files" 181
+
+javac \
+    -source 8 \
+    -target 8 \
+    -classpath "$ANDROID_JAR" \
+    -d "$OUT/classes" \
+    "${JAVA_FILES[@]}"
+
+echo
+echo "=== DEX ==="
+mapfile -t CLASS_FILES < <(
+    find "$OUT/classes" -type f -name '*.class' | sort
+)
+
+[ "${#CLASS_FILES[@]}" -gt 0 ] ||
+    fail "no compiled classes" 182
+
+d8 \
+    --lib "$ANDROID_JAR" \
+    --output "$OUT/dex" \
+    "${CLASS_FILES[@]}"
+
+[ -s "$OUT/dex/classes.dex" ] ||
+    fail "classes.dex missing" 183
+
+echo
+echo "=== PACKAGE ==="
+cp "$OUT/base.apk" "$OUT/unsigned.apk"
+
+(
+    cd "$OUT/dex"
+    zip -q "$OUT/unsigned.apk" classes.dex
+)
+
+# Package canonical runtime assets only.
+if [ -f "$APP/assets/index.html" ]; then
+    (
+        cd "$APP"
+        zip -q "$OUT/unsigned.apk" assets/index.html
+    )
+fi
+
+if [ -f "$APP/assets/style.css" ]; then
+    (
+        cd "$APP"
+        zip -q "$OUT/unsigned.apk" assets/style.css
+    )
+fi
+
+echo
+echo "=== ALIGN ==="
+zipalign -f 4 \
+    "$OUT/unsigned.apk" \
+    "$OUT/aligned.apk"
+
+echo
+echo "=== SIGN ==="
+apksigner sign \
+    --ks "$KEYSTORE" \
+    --ks-key-alias androiddebugkey \
+    --ks-pass pass:android \
+    --key-pass pass:android \
+    --out "$OUT/$APK" \
+    "$OUT/aligned.apk"
+
+echo
+echo "=== VERIFY ==="
+apksigner verify --verbose "$OUT/$APK"
+
+unzip -t "$OUT/$APK" >/dev/null
+
+unzip -l "$OUT/$APK" |
+    grep -q 'classes.dex' ||
+    fail "APK classes.dex missing" 184
+
+if unzip -l "$OUT/$APK" |
+    grep -Eq 'assets/.*(backup|pre-|working|health-pass)'; then
+    fail "backup asset leaked into APK" 185
+fi
+
+sha256sum "$OUT/$APK" > "$OUT/$APK.sha256"
+
+echo
+echo "ANDROID BUILD: PASS"
+echo "PACKAGE: $PACKAGE"
+echo "VERSION: $VERSION"
+echo "VERSION CODE: $VERSION_CODE"
+echo "APK: $OUT/$APK"
+echo "SHA256: $(cut -d' ' -f1 "$OUT/$APK.sha256")"

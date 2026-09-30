@@ -1,0 +1,58 @@
+#!/data/data/com.termux/files/usr/bin/bash
+set -e
+
+DEV="$HOME/corvus-dev"
+OBJECTIVE="$*"
+PLAN="$DEV/last-plan.txt"
+
+[ -n "$OBJECTIVE" ] || {
+ echo "OBJECTIVE PLAN: BLOCKED - objective required"
+ exit 70
+}
+
+"$DEV/check-objective.py" "$OBJECTIVE"
+
+CONTEXT="$("$DEV/repo-context.sh")"
+PLANNER_RULES="$(cat "$DEV/planner-prompt.txt")"
+
+PROMPT="$PLANNER_RULES
+
+REPOSITORY CONTEXT:
+$CONTEXT
+
+OBJECTIVE:
+$OBJECTIVE
+
+OUTPUT:
+Return exactly five plain-text lines:
+SUMMARY: <summary>
+TARGET: <repository path>
+CHANGE: <change>
+TEST: <test>
+RISK: <risk>"
+
+echo "=== CORVUS DEVELOPMENT PLAN ==="
+
+if ! "$DEV/planner-infer.sh" "$PROMPT" > "$PLAN"; then
+ echo "OBJECTIVE PLAN: FAIL - inference failed"
+ rm -f "$PLAN"
+ exit 76
+fi
+
+cat "$PLAN"
+
+echo
+echo "=== PLAN EXTRACTION ==="
+
+EXTRACTED="$DEV/tmp/objective-plan.extracted"
+"$DEV/extract-plan.py" < "$PLAN" > "$EXTRACTED"
+
+echo
+echo "=== PLAN VALIDATION ==="
+
+"$DEV/validate-plan.py" "$EXTRACTED" "$OBJECTIVE"
+
+mv "$EXTRACTED" "$PLAN"
+
+echo
+echo "=== PLAN COMPLETE ==="
