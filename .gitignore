@@ -18,3 +18,6 @@ data/library/
 
 bin/*.pre-*
 bin/*.bak
+
+android-app/lib/
+android-app/native/*.so

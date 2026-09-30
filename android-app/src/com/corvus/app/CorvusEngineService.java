@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.IBinder;
 
+import java.io.File;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -15,18 +16,20 @@ public class CorvusEngineService extends Service {
         void onError(String error);
     }
 
-    private static final ExecutorService executor =
+    private static final ExecutorService EXECUTOR =
         Executors.newSingleThreadExecutor();
 
     static {
-        try {
-            System.loadLibrary("corvus");
-        } catch (UnsatisfiedLinkError ignored) {
-        }
+        System.loadLibrary("c++_shared");
+        System.loadLibrary("ggml-base");
+        System.loadLibrary("ggml");
+        System.loadLibrary("ggml-cpu");
+        System.loadLibrary("llama");
+        System.loadLibrary("corvus");
     }
 
     private static native String nativeAsk(
-        String filesDir,
+        String modelPath,
         String prompt
     );
 
@@ -35,38 +38,54 @@ public class CorvusEngineService extends Service {
         String prompt,
         Callback callback
     ) {
-        if (prompt == null || prompt.trim().isEmpty()) {
-            callback.onError("Prompt required.");
+
+        if (prompt == null ||
+            prompt.trim().isEmpty()) {
+
+            callback.onError(
+                "Prompt required."
+            );
+
             return;
         }
 
-        final String filesDir =
-            context.getApplicationContext()
-                   .getFilesDir()
-                   .getAbsolutePath();
+        File model =
+            ModelManager.modelFile(context);
 
-        executor.execute(() -> {
+        if (!ModelManager.isReady(context)) {
+            callback.onError(
+                "Verified local model unavailable."
+            );
+            return;
+        }
+
+        EXECUTOR.execute(() -> {
             try {
-                String answer = nativeAsk(filesDir, prompt);
+                String answer =
+                    nativeAsk(
+                        model.getAbsolutePath(),
+                        prompt.trim()
+                    );
 
-                if (answer == null || answer.trim().isEmpty()) {
+                if (answer == null ||
+                    answer.trim().isEmpty()) {
+
                     callback.onError(
                         "Native CORVUS returned no response."
                     );
+
                     return;
                 }
 
-                callback.onAnswer(answer.trim());
-
-            } catch (UnsatisfiedLinkError e) {
-                callback.onError(
-                    "Native CORVUS runtime is not installed yet."
+                callback.onAnswer(
+                    answer.trim()
                 );
 
             } catch (Throwable e) {
                 callback.onError(
-                    "CORVUS engine error: " +
-                    e.getClass().getSimpleName()
+                    "CORVUS native engine: " +
+                    e.getClass()
+                     .getSimpleName()
                 );
             }
         });
@@ -75,9 +94,10 @@ public class CorvusEngineService extends Service {
     @Override
     public void onCreate() {
         super.onCreate();
+
         android.util.Log.i(
             "CORVUS_ENGINE",
-            "App-owned engine service started"
+            "Native CORVUS service started"
         );
     }
 
@@ -91,7 +111,9 @@ public class CorvusEngineService extends Service {
     }
 
     @Override
-    public IBinder onBind(Intent intent) {
+    public IBinder onBind(
+        Intent intent
+    ) {
         return null;
     }
 }
