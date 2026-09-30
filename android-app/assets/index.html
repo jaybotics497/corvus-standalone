@@ -1,0 +1,215 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CORVUS</title>
+<link rel="stylesheet" href="style.css">
+  <meta name="theme-color" content="#0b0d0e">
+  <meta name="mobile-web-app-capable" content="yes">
+  <link rel="manifest" href="manifest.webmanifest">
+</head>
+
+<body>
+<header>
+  <div class="brand">
+    <div class="mark">◆</div>
+    <div>
+      <h1>CORVUS</h1>
+      <small>LOCAL INTELLIGENCE</small>
+    </div>
+  </div>
+
+  <div class="status">
+    <i></i>
+    NORMAL
+  </div>
+</header>
+
+<main>
+  <section class="chat screen active-screen" data-screen="chat">
+    <div class="welcome">
+      <div class="raven-mark" aria-hidden="true"></div>
+      <h2>CORVUS</h2>
+      <p>PRIVATE · LOCAL · READY</p>
+    </div>
+
+    <div class="messages">
+      <div class="message corvus">
+        <small>CORVUS</small>
+        Systems operational. What are we working on?
+      </div>
+    </div>
+
+    <form class="composer">
+      <textarea placeholder="Message CORVUS..." rows="1"></textarea>
+      <button type="button">↑</button>
+    </form>
+  </section>
+
+  <section class="screen" data-screen="library" hidden>
+    <h2>Library</h2>
+  </section>
+
+  <section class="screen" data-screen="study" hidden>
+    <h2>Study</h2>
+  </section>
+
+  <section class="screen" data-screen="tools" hidden>
+    <h2>Tools</h2>
+  </section>
+
+  <section class="screen" data-screen="development" hidden>
+    <h2>Development</h2>
+  </section>
+</main>
+
+<nav aria-label="Primary navigation">
+  <button class="active" type="button" data-target="chat" aria-current="page"><b>◉</b><span>Chat</span></button>
+  <button type="button" data-target="library"><b>▤</b><span>Library</span></button>
+  <button type="button" data-target="study"><b>◇</b><span>Study</span></button>
+  <button type="button" data-target="tools"><b>⚙</b><span>Tools</span></button>
+  <button type="button" data-target="development"><b>⌘</b><span>Development</span></button>
+</nav>
+  <script>
+    const form = document.querySelector(".composer");
+    const input = form.querySelector("textarea");
+    const sendButton = form.querySelector("button");
+    const messages = document.querySelector(".messages");
+
+    const screens = document.querySelectorAll("[data-screen]");
+    const navButtons = document.querySelectorAll("nav [data-target]");
+
+    function showScreen(name) {
+      screens.forEach(screen => {
+        const active = screen.dataset.screen === name;
+        screen.hidden = !active;
+        screen.classList.toggle("active-screen", active);
+      });
+
+      navButtons.forEach(button => {
+        const active = button.dataset.target === name;
+        button.classList.toggle("active", active);
+
+        if (active) {
+          button.setAttribute("aria-current", "page");
+        } else {
+          button.removeAttribute("aria-current");
+        }
+      });
+    }
+
+    navButtons.forEach(button => {
+      button.addEventListener("click", () => {
+        showScreen(button.dataset.target);
+      });
+    });
+
+
+    let waiting = false;
+
+    function addMessage(role, text) {
+      const message = document.createElement("div");
+      message.className = "message " + role;
+
+      if (role === "corvus") {
+        const label = document.createElement("small");
+        label.textContent = "CORVUS";
+        message.appendChild(label);
+      }
+
+      const content = document.createElement("div");
+      content.className = "message-text";
+      content.textContent = text;
+
+      message.appendChild(content);
+      messages.appendChild(message);
+
+      message.scrollIntoView({
+        behavior: "smooth",
+        block: "end"
+      });
+    }
+
+    function setWaiting(value) {
+      waiting = value;
+      input.disabled = value;
+      sendButton.disabled = value;
+    }
+
+    function sendMessage() {
+      const prompt = input.value.trim();
+
+      if (!prompt || waiting) {
+        return;
+      }
+
+      if (!window.CorvusBridge ||
+          typeof CorvusBridge.ask !== "function") {
+        addMessage("corvus", "Native CORVUS bridge unavailable.");
+        window.corvusSetStatus("OFFLINE");
+        return;
+      }
+
+      addMessage("user", prompt);
+      input.value = "";
+      setWaiting(true);
+      window.corvusSetStatus("THINKING");
+
+      CorvusBridge.ask(prompt);
+    }
+
+    form.addEventListener("submit", event => {
+      event.preventDefault();
+      sendMessage();
+    });
+
+    sendButton.addEventListener("click", sendMessage);
+
+    input.addEventListener("keydown", event => {
+      if (event.key === "Enter" && !event.shiftKey) {
+        event.preventDefault();
+        sendMessage();
+      }
+    });
+
+    window.corvusReceive = function(answer) {
+      addMessage(
+        "corvus",
+        answer || "CORVUS returned an empty response."
+      );
+
+      setWaiting(false);
+      input.focus();
+    };
+
+    window.corvusError = function(error) {
+      addMessage(
+        "corvus",
+        "Error: " + (error || "Unknown CORVUS error.")
+      );
+
+      setWaiting(false);
+      input.focus();
+    };
+
+    window.corvusSetStatus = function(status) {
+      const el = document.querySelector(".status");
+
+      if (!el) {
+        return;
+      }
+
+      el.innerHTML = "";
+
+      const dot = document.createElement("i");
+      el.appendChild(dot);
+      el.appendChild(
+        document.createTextNode(status)
+      );
+
+      el.dataset.state = status.toLowerCase();
+    };
+  </script>
+</body>
+</html>

@@ -1,0 +1,32 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.corvus.app"
+    android:versionCode="15"
+    android:versionName="0.5">
+
+    <uses-permission android:name="android.permission.INTERNET"/>
+
+    <application
+        android:theme="@style/AppTheme"
+        android:label="CORVUS"
+        android:allowBackup="false"
+        android:usesCleartextTraffic="true">
+
+        <service
+            android:name=".CorvusEngineService"
+            android:exported="false" />
+
+        <activity
+            android:name=".MainActivity"
+            android:screenOrientation="portrait"
+            android:exported="true">
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+
+        </activity>
+
+    </application>
+
+</manifest>
