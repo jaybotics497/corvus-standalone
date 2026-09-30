@@ -1,0 +1,18 @@
+#!/data/data/com.termux/files/usr/bin/bash
+set -euo pipefail
+DEV="$HOME/corvus-dev"; MANAGER="$DEV/android-candidate-manager.sh"; GEN="$DEV/generate-android-operations-v2.py"; TXN="$DEV/android-operation-transaction.py"; OPS="$DEV/changes/android-operations.json"
+OBJECTIVE="$*"
+[ -n "$OBJECTIVE" ] || { echo 'CORVUS DEVELOP: BLOCKED - objective required'; exit 300; }
+command -v termux-wake-lock >/dev/null 2>&1 && termux-wake-lock || true
+unlock(){ command -v termux-wake-unlock >/dev/null 2>&1 && termux-wake-unlock || true; }
+trap unlock EXIT INT TERM
+printf '%s\n' '=== CORVUS DEVELOP ===' "OBJECTIVE: $OBJECTIVE"
+"$MANAGER" reset
+"$GEN" "$OBJECTIVE"
+"$TXN" "$OPS"
+"$MANAGER" test
+"$MANAGER" fingerprint
+"$MANAGER" verify
+echo '=== CORVUS VERIFIED CANDIDATE ==='
+echo 'STATUS: VERIFIED - NOT PROMOTED'
+echo 'Approval/promotion remains a separate action.'
